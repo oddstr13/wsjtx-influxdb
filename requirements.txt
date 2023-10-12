@@ -1,0 +1,4 @@
+influxdb==5.3.1
+wsjtx-srv==0.6
+maidenhead==1.7.0
+pyproj==3.6.1
