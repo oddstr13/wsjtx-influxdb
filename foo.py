@@ -233,18 +233,42 @@ class Entry:
     def sender_coordinates(self) -> Optional[DecimalDegrees]:
         if self.sender_grid:
             return DecimalDegrees.fromGridsquare(self.sender_grid)
+    
+    @property
+    def band_name(self) -> Optional[str]:
+        return frequencyToBand(self.frequency)
 
     def __str__(self):
         return f"{self.time}\t{self.snr:> 2d}\t{self.mode}\t{self.frequency/1000: 8.3f} kHz\t{self.message}"
 
 
-def frequencyToHAMBand(frequency: int):
-    # TODO: NotImplemented
+_bandplan: Dict[str, Tuple[int, int]] = {}
+
+
+def parseBandplanCsv():
+    with open("bandplan_MHz.csv", "r", encoding="utf8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                name, min_frequency, max_frequency = line.split(";")
+                _bandplan[name] = (
+                    int(float(min_frequency) * 1000000),
+                    (float(max_frequency) * 1000000),
+                )
+                print(name, _bandplan[name])
+parseBandplanCsv()
+
+
+def frequencyToBand(frequency: int) -> Optional[str]:
+    for name, (min_frequency, max_frequency) in _bandplan.items():
+        if frequency > min_frequency and frequency < max_frequency:
+            return name
+    print(f"Unknown band: {frequency}")
     return None
 
 
 def entryToInfluxdb(entry: Entry):
-    m = {
+    m: Dict[str, Union[str, dict]] = {
         "measurement": "entry",
         "time": entry.time.isoformat(),
     }
@@ -271,6 +295,10 @@ def entryToInfluxdb(entry: Entry):
     m["tags"]["snr"] = entry.snr
     m["fields"]["frequency"] = entry.frequency
     m["fields"]["message"] = entry.message
+
+    band = entry.band_name
+    if band:
+        m["tags"]["band"] = band
 
     if entry.sender_grid:
         m["tags"]["has_sender_grid"] = True
@@ -318,6 +346,38 @@ class UdpConn(UDP_Connector):
 UDP_CONN = UdpConn()
 
 
+def parseWsjtMessage(message: str):
+    msplit = message.strip().split()
+    cq = msplit[0].upper() == "CQ"
+    if len(msplit) > 1 and msplit[1].upper() == "DX":
+        msplit.pop(1)
+    # TODO: implement full message parsing
+    # TZ3LTD/P JG4AMP/P R EC88
+    # 8P6GE RA4NCC LO68
+    # KK4CQN RA6ABO R-04
+    # CQ R7DX KN84
+    # KA6BIM UN7JO +05
+    # KE0LCS R7DX -15
+    # YI3WHR RK4HP 73
+    # K6BRN RZ6L RR73
+    # ZL2BX <...> -09
+    # RV3HSG EK5AUA/R DO88
+    # <N6BCE> R0FBA/9
+    # RC0AT <R0FBA/9> +08
+    # <SV8EUL> <...> R 520305 LG83SK
+
+    tel = BasicClass()
+    tel.message = message
+
+    sender_callsign = UDP_CONN.parse_message(tel)
+    sender_grid = None
+    if cq and len(msplit) == 3:
+        if UDP_CONN.is_locator(msplit[2]):
+            sender_grid = msplit[2]
+    
+    return cq, sender_callsign, sender_grid
+
+
 def parseWsjtxAllLog(file_path: str) -> Iterable[Entry]:
     with open(file_path, "r", encoding="utf8") as fh:
         for line in fh:
@@ -343,22 +403,12 @@ def parseWsjtxAllLog(file_path: str) -> Iterable[Entry]:
                 if not message:
                     continue
 
-                msplit = message.split()
-                cq = msplit[0].upper() == "CQ"
-                if len(msplit) > 1 and msplit[1].upper() == "DX":
-                    msplit.pop(1)
-                tel = BasicClass()
-                tel.message = message
-                sender_callsign = UDP_CONN.parse_message(tel)
-                sender_grid = None
-                if cq and len(msplit) == 3:
-                    if UDP_CONN.is_locator(msplit[2]):
-                        sender_grid = msplit[2]
+                cq, sender_callsign, sender_grid = parseWsjtMessage(message)
 
                 entry = Entry(
                     mode=Mode.get(raw_mode),
                     snr=int(raw_snr),
-                    frequency=int(float(raw_freq) * 1000 + int(raw_freq_offset)),
+                    frequency=int(float(raw_freq) * 1000000 + int(raw_freq_offset)),
                     message=message,
                     time=datetime.datetime.strptime(raw_time, "%y%m%d_%H%M%S")
                     + datetime.timedelta(seconds=float(raw_time_offset)),
@@ -473,30 +523,7 @@ if __name__ == "__main__":
                     print(tel)
                     continue
 
-                # print(tel)
-                msplit = tel.message.strip().split()
-                cq = msplit[0].upper() == "CQ"
-                if len(msplit) > 1 and msplit[1].upper() == "DX":
-                    msplit.pop(1)
-                # TODO: implement full message parsing
-                # TZ3LTD/P JG4AMP/P R EC88
-                # 8P6GE RA4NCC LO68
-                # KK4CQN RA6ABO R-04
-                # CQ R7DX KN84
-                # KA6BIM UN7JO +05
-                # KE0LCS R7DX -15
-                # YI3WHR RK4HP 73
-                # K6BRN RZ6L RR73
-                # ZL2BX <...> -09
-                # RV3HSG EK5AUA/R DO88
-                # <N6BCE> R0FBA/9
-                # RC0AT <R0FBA/9> +08
-                # <SV8EUL> <...> R 520305 LG83SK
-                sender_callsign = UDP_CONN.parse_message(tel)
-                sender_grid = None
-                if cq and len(msplit) == 3:
-                    if UDP_CONN.is_locator(msplit[2]):
-                        sender_grid = msplit[2]
+                cq, sender_callsign, sender_grid = parseWsjtMessage(tel.message)
 
                 entry = Entry(
                     message=tel.message,
