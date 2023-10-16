@@ -111,7 +111,7 @@ def sortEntries(entries: Iterable[Entry]):
     return sorted(entries, key=lambda e: (e.time, e.frequency))
 
 
-def entriesOlderThan(entries: Iterable[Entry], seconds=5):
+def entriesOlderThan(entries: Iterable[Entry], seconds=15):
     now = datetime.datetime.utcnow()
     td = datetime.timedelta(seconds=seconds)
     return filter(lambda e: now - e.time > td, entries)
@@ -123,7 +123,7 @@ def influxPushData(entries: Iterable[Entry]) -> Optional[Iterable[Entry]]:
     Pushes entries to InfluxDB (if they're old enough)
     Returns list of entries NOT pushed, or None
     """
-    print("Processing…")
+    print(f"Processing… {datetime.datetime.utcnow()}")
     to_push = sortEntries(entriesOlderThan(entries))
     left = list(entries)
     for entry in to_push:
