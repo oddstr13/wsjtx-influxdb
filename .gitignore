@@ -1,3 +1,5 @@
 ALL*.TXT
 
 *.py[ocd]
+
+.coverage

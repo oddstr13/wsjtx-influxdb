@@ -12,11 +12,11 @@ class FrequencyRange(namedtuple("FrequencyRange", ["minimum", "maximum"])):
     maximum: NumberType
 
     def contains(self, frequency: NumberType) -> bool:
-        return frequency > self.minimum and frequency < self.maximum
+        return frequency >= self.minimum and frequency <= self.maximum
 
     def __contains__(self, __key: object) -> bool:
         if isinstance(__key, NumberType.__args__):  # type: ignore [attr-defined]
-            self.contains(__key)
+            return self.contains(__key)
         return super().__contains__(__key)
 
 
