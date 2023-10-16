@@ -24,7 +24,8 @@ import maidenhead
 from pyproj import Geod
 
 
-from config import *
+from .config import *
+from .utils import frequencyToBand
 
 
 def ratelimit(func):
@@ -233,38 +234,13 @@ class Entry:
     def sender_coordinates(self) -> Optional[DecimalDegrees]:
         if self.sender_grid:
             return DecimalDegrees.fromGridsquare(self.sender_grid)
-    
+
     @property
     def band_name(self) -> Optional[str]:
         return frequencyToBand(self.frequency)
 
     def __str__(self):
         return f"{self.time}\t{self.snr:> 2d}\t{self.mode}\t{self.frequency/1000: 8.3f} kHz\t{self.message}"
-
-
-_bandplan: Dict[str, Tuple[int, int]] = {}
-
-
-def parseBandplanCsv():
-    with open("bandplan_MHz.csv", "r", encoding="utf8") as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                name, min_frequency, max_frequency = line.split(";")
-                _bandplan[name] = (
-                    int(float(min_frequency) * 1000000),
-                    (float(max_frequency) * 1000000),
-                )
-                print(name, _bandplan[name])
-parseBandplanCsv()
-
-
-def frequencyToBand(frequency: int) -> Optional[str]:
-    for name, (min_frequency, max_frequency) in _bandplan.items():
-        if frequency > min_frequency and frequency < max_frequency:
-            return name
-    print(f"Unknown band: {frequency}")
-    return None
 
 
 def entryToInfluxdb(entry: Entry):
@@ -374,7 +350,7 @@ def parseWsjtMessage(message: str):
     if cq and len(msplit) == 3:
         if UDP_CONN.is_locator(msplit[2]):
             sender_grid = msplit[2]
-    
+
     return cq, sender_callsign, sender_grid
 
 
