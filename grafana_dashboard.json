@@ -344,7 +344,7 @@
 					"measurement": "entry",
 					"orderByTime": "ASC",
 					"policy": "default",
-					"query": "SELECT last(\"snr\") FROM \"entry\" WHERE (\"receiver_callsign\"::tag = 'SWL/ODDSTR13' AND \"snr\"::field != '0') AND $timeFilter GROUP BY time($interval), \"snr\"::field fill(null)",
+					"query": "SELECT count(\"snr\") FROM \"entry\" WHERE (\"receiver_callsign\"::tag =~ /^$receiver$/ AND \"mode\"::tag =~ /^$mode$/ AND \"band\"::tag =~ /^$band$/) AND $timeFilter GROUP BY time($interval), \"snr\"::field fill(none)",
 					"rawQuery": false,
 					"refId": "A",
 					"resultFormat": "table",
@@ -533,8 +533,8 @@
 						{
 							"condition": "AND",
 							"key": "receiver_callsign::tag",
-							"operator": "=",
-							"value": "SWL/ODDSTR13"
+							"operator": "=~",
+							"value": "/^$receiver$/"
 						},
 						{
 							"condition": "AND",
@@ -995,6 +995,6 @@
 	"timezone": "",
 	"title": "Radio RX",
 	"uid": "a50c2751-ae61-462d-ad62-baf3493642e7",
-	"version": 19,
+	"version": 21,
 	"weekStart": ""
 }
