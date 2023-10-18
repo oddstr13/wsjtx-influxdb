@@ -1,6 +1,6 @@
 import datetime
 from enum import Enum, auto
-from typing import Iterable
+from typing import Iterable, Optional
 
 from wsjtx_srv.wsjtx import UDP_Connector
 
@@ -71,46 +71,51 @@ def parseWsjtMessage(message: str):
     return cq, sender_callsign, sender_grid
 
 
+def parseWsjtxAllLogLine(line: str) -> Optional[Entry]:
+    line = line.strip()
+    data = line.split(maxsplit=7)
+    if len(data) < 8:
+        return None
+
+    (
+        raw_time,
+        raw_freq,
+        _,
+        raw_mode,
+        raw_snr,
+        raw_time_offset,
+        raw_freq_offset,
+        message,
+    ) = data
+
+    cq, sender_callsign, sender_grid = parseWsjtMessage(message)
+
+    entry = Entry(
+        mode=Mode.get(raw_mode),
+        snr=int(raw_snr),
+        frequency=int(float(raw_freq) * 1000000 + int(raw_freq_offset)),
+        message=message,
+        time=datetime.datetime.strptime(raw_time, "%y%m%d_%H%M%S")
+        + datetime.timedelta(seconds=float(raw_time_offset)),
+        cq=cq,
+        sender_callsign=sender_callsign,
+        sender_grid=sender_grid,
+        receiver_grid=RECEIVER_GRID,
+        receiver_callsign=RECEIVER_CALLSIGN,
+    )
+
+    return entry
+
+
 def parseWsjtxAllLog(file_path: str) -> Iterable[Entry]:
     with open(file_path, "r", encoding="utf8") as fh:
         for line in fh:
             try:
-                line = line.strip()
-                data = line.split(maxsplit=7)
-                if len(data) < 8:
-                    print(data)
-                    continue
-                # ['231006_035100', '3.573', 'Rx', 'FT8', '-16', '0.6', '2753', 'CQ DX F4BKV IN95']
-                (
-                    raw_time,
-                    raw_freq,
-                    _,
-                    raw_mode,
-                    raw_snr,
-                    raw_time_offset,
-                    raw_freq_offset,
-                    message,
-                ) = data
+                entry = parseWsjtxAllLogLine(line)
 
-                message = message.strip()
-                if not message:
+                if entry is None:
                     continue
 
-                cq, sender_callsign, sender_grid = parseWsjtMessage(message)
-
-                entry = Entry(
-                    mode=Mode.get(raw_mode),
-                    snr=int(raw_snr),
-                    frequency=int(float(raw_freq) * 1000000 + int(raw_freq_offset)),
-                    message=message,
-                    time=datetime.datetime.strptime(raw_time, "%y%m%d_%H%M%S")
-                    + datetime.timedelta(seconds=float(raw_time_offset)),
-                    cq=cq,
-                    sender_callsign=sender_callsign,
-                    sender_grid=sender_grid,
-                    receiver_grid=RECEIVER_GRID,
-                    receiver_callsign=RECEIVER_CALLSIGN,
-                )
                 yield entry
             except ValueError:
                 print(line)
