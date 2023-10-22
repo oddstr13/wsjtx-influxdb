@@ -8,6 +8,7 @@ from wsjtx_influxdb.wsjtx_extras import (
     parseWsjtMessage,
     parseWsjtxAllLog,
     parseWsjtxAllLogLine,
+    UDP_CONN,
 )
 
 
@@ -49,6 +50,7 @@ def test_parse_time(time, delta_t, expected):
         ("RC0AT <R0FBA/9> +08", (False, "<R0FBA/9>", None)),
         ("<SV8EUL> <...> R 520305 LG83SK", (False, None, None)),
         ("CQ DX F4BKV IN95", (True, "F4BKV", "IN95")),
+        ("CQ NA PF01MAX", (True, "PF01MAX", None)),
     ],
 )
 def test_parseWsjtMessage(message, expected):
@@ -411,3 +413,26 @@ def test_parseWsjtxAllLog(data, expected, tmp_path):
         fh.write(data)
 
     assert list(parseWsjtxAllLog(tmp_path / "ALL.TXT")) == expected
+
+
+@pytest.mark.parametrize(
+    "locator,expected",
+    (
+        ("PF01MAX", False),
+        # RR73 is technically a valid locator in the archtic ocean,
+        # but most often used for acknowledging end of contact.
+        ("RR73", False),
+        ("KN28LH", True),
+        ("JO93", True),
+        ("MH09me", True),
+        ("JJ00aa00", True),
+        ("II50aa00", True),
+        ("AA00aa00", True),
+        ("JQ78tf", True),
+        ("EL29kn", True),
+        ("JB17gx", True),
+
+    ),
+)
+def test_is_locator(locator, expected):
+    assert UDP_CONN.is_locator(locator) == expected

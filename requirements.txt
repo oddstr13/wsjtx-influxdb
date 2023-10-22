@@ -1,4 +1,4 @@
 influxdb==5.3.1
-wsjtx-srv==0.6
+wsjtx-srv @ git+https://github.com/schlatterbeck/wsjtx-srv.git@9a8e50e
 maidenhead==1.7.0
 pyproj==3.6.1

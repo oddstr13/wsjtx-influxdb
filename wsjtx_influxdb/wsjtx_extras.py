@@ -1,6 +1,7 @@
 import datetime
 from enum import Enum, auto
 from typing import Iterable, Optional
+from typing_extensions import override
 
 from wsjtx_srv.wsjtx import UDP_Connector
 
@@ -39,7 +40,7 @@ def parse_time(time: int, offset: float):
 def parseWsjtMessage(message: str):
     msplit = message.strip().split()
     cq = msplit[0].upper() == "CQ"
-    if len(msplit) > 1 and msplit[1].upper() == "DX":
+    if len(msplit) > 1 and msplit[1].upper() in ("DX", "NA",):
         msplit.pop(1)
     # TODO: implement full message parsing
     # TZ3LTD/P JG4AMP/P R EC88
@@ -56,13 +57,7 @@ def parseWsjtMessage(message: str):
     # RC0AT <R0FBA/9> +08
     # <SV8EUL> <...> R 520305 LG83SK
 
-    class Tel:
-        message: str
-
-    tel = Tel()
-    tel.message = message
-
-    sender_callsign = UDP_CONN.parse_message(tel)
+    sender_callsign = UDP_CONN.parse_message(message)
     sender_grid = None
     if cq and len(msplit) == 3:
         if UDP_CONN.is_locator(msplit[2]):
@@ -124,6 +119,14 @@ def parseWsjtxAllLog(file_path: str) -> Iterable[Entry]:
 class UdpConn(UDP_Connector):
     def __init__(self):
         pass
+
+    @override
+    @classmethod
+    def is_locator(cls, s):
+        UDP_Connector.is_locator.__doc__
+        if s.upper() == "RR73":
+            return False
+        return super().is_locator(s)
 
 
 UDP_CONN = UdpConn()
