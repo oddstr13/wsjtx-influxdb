@@ -3,7 +3,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum, auto
-from typing import Dict, Optional, TextIO, Tuple, Union
+from typing import Dict, Optional, TextIO, Union
 from functools import cache, lru_cache
 from importlib import resources
 

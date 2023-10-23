@@ -109,10 +109,8 @@ def test_entry():
     assert entry.heading == pytest.approx(220.863, abs=0.0005)
     assert entry.band_name == "20m"
     print(repr(str(entry)))
-    assert (
-        str(entry)
-        == "2023-10-16 07:01:45.500000\t 8\tFT8\t 14075.901 kHz\tCQ DX M0WYB IO81"
-    )
+    entry_str = "2023-10-16 07:01:45.500000\t 8\tFT8\t 14075.901 kHz\tCQ DX M0WYB IO81"
+    assert str(entry) == entry_str
 
     coords = entry.sender_coordinates
     assert (coords.latitude, coords.longitude) == pytest.approx((51.5, -3))

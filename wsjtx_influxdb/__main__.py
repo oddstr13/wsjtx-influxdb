@@ -11,7 +11,7 @@ from typing import (
     TypedDict,
     TYPE_CHECKING,
 )
-from urllib.parse import urlsplit, SplitResult
+from urllib.parse import urlsplit
 from time import time as time_now_s
 import requests
 
@@ -24,7 +24,7 @@ from wsjtx_srv.wsjtx import (  # type: ignore [import]
 )
 import influxdb  # type: ignore [import]
 
-from .config import *
+from .config import INFLUXDB_DATABASE, INFLUXDB_URL, RECEIVER_CALLSIGN, RECEIVER_GRID
 from .wsjtx_extras import parse_time, parseWsjtMessage, parseWsjtxAllLog
 from .utils import Mode, Entry
 

@@ -1,5 +1,4 @@
 import datetime
-from enum import Enum, auto
 from typing import Iterable, Optional
 from typing_extensions import override
 
@@ -85,13 +84,14 @@ def parseWsjtxAllLogLine(line: str) -> Optional[Entry]:
 
     cq, sender_callsign, sender_grid = parseWsjtMessage(message)
 
+    entry_time = datetime.datetime.strptime(raw_time, "%y%m%d_%H%M%S")
+    entry_time += datetime.timedelta(seconds=float(raw_time_offset))
     entry = Entry(
         mode=Mode.get(raw_mode),
         snr=int(raw_snr),
         frequency=int(float(raw_freq) * 1000000 + int(raw_freq_offset)),
         message=message,
-        time=datetime.datetime.strptime(raw_time, "%y%m%d_%H%M%S")
-        + datetime.timedelta(seconds=float(raw_time_offset)),
+        time=entry_time,
         cq=cq,
         sender_callsign=sender_callsign,
         sender_grid=sender_grid,
