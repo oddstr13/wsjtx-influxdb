@@ -8,7 +8,7 @@ from functools import cache, lru_cache
 from importlib import resources
 
 from pyproj import Geod
-import maidenhead  # type: ignore [import-untyped]
+import maidenhead  # type: ignore [import]
 
 NumberType = Union[int, float, Decimal]
 

@@ -2,19 +2,27 @@
 import socket
 import datetime
 import sys
-from typing import Dict, Iterable, Optional, Tuple, Union
-import urllib
+from typing import (
+    Dict,
+    Iterable,
+    Literal,
+    Optional,
+    Union,
+    TypedDict,
+    TYPE_CHECKING,
+)
+from urllib.parse import urlsplit, SplitResult
 from time import time as time_now_s
 import requests
 
-from wsjtx_srv.wsjtx import (
+from wsjtx_srv.wsjtx import (  # type: ignore [import]
     WSJTX_Telegram as Telegram,
     WSJTX_Heartbeat as Heartbeat,
     WSJTX_Status as Status,
     WSJTX_Decode as Decode,
     WSJTX_WSPR_Decode as WSPRDecode,
 )
-import influxdb
+import influxdb  # type: ignore [import]
 
 from .config import *
 from .wsjtx_extras import parse_time, parseWsjtMessage, parseWsjtxAllLog
@@ -38,25 +46,31 @@ def ratelimit(func):
 
 
 def parse_influxdb_url(influxdb_url: str):
-    url = urllib.parse.urlsplit(influxdb_url)
-    host, port = urllib.parse.splitport(url.netloc)
-    https = url.scheme == "https"
+    url = urlsplit(influxdb_url)
+    port = url.port
     if port is None:
-        port = 443 if https else 80
+        port = 443 if url.scheme == "https" else 80
 
-    return {"host": host, "port": port, "path": url.path}
+    return {"host": url.hostname, "port": port, "path": url.path}
 
 
 # Status dial_frq=14074000 mode=FT8 dx_call=ZD9W report=0 tx_mode=FT8 tx_enabled=0 xmitting=0 decoding=0 rx_df=1500 tx_df=1500 de_call=SWL de_grid=MH09me dx_grid=None tx_watchdog=0 sub_mode=None fast_mode=0 special_op=0 frq_tolerance=4294967295 t_r_period=4294967295 config_name=Default tx_message=None
 
 
+class InfluxdbMeasurement(TypedDict):
+    measurement: Literal["entry"]
+    time: str
+    tags: Dict[str, Union[str, int, float, bool]]
+    fields: Dict[str, Union[str, int, float, bool]]
+
+
 def entryToInfluxdb(entry: Entry):
-    m: Dict[str, Union[str, dict]] = {
+    m: InfluxdbMeasurement = {
         "measurement": "entry",
         "time": entry.time.isoformat(),
+        "tags": {},
+        "fields": {},
     }
-    m["tags"]: Dict[str, Union[str, int, float, bool]] = {}
-    m["fields"]: Dict[str, Union[str, int, float, bool]] = {}
 
     m["tags"]["mode"] = str(entry.mode)
     m["tags"]["cq"] = entry.cq
@@ -84,6 +98,10 @@ def entryToInfluxdb(entry: Entry):
         m["tags"]["band"] = band
 
     if entry.sender_grid:
+        if TYPE_CHECKING:
+            assert entry.distance is not None
+            assert entry.heading is not None
+            assert entry.sender_coordinates is not None
         m["tags"]["has_sender_grid"] = True
         m["fields"]["distance"] = entry.distance
         m["fields"]["heading"] = entry.heading

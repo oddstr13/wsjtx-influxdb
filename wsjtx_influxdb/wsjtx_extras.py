@@ -3,7 +3,7 @@ from enum import Enum, auto
 from typing import Iterable, Optional
 from typing_extensions import override
 
-from wsjtx_srv.wsjtx import UDP_Connector
+from wsjtx_srv.wsjtx import UDP_Connector  # type: ignore [import]
 
 from .utils import Entry, Mode
 from .config import RECEIVER_CALLSIGN, RECEIVER_GRID
@@ -40,7 +40,7 @@ def parse_time(time: int, offset: float):
 def parseWsjtMessage(message: str):
     msplit = message.strip().split()
     cq = msplit[0].upper() == "CQ"
-    if len(msplit) > 1 and msplit[1].upper() in ("DX", "NA",):
+    if len(msplit) > 1 and msplit[1].upper() in ("DX", "NA"):
         msplit.pop(1)
     # TODO: implement full message parsing
     # TZ3LTD/P JG4AMP/P R EC88

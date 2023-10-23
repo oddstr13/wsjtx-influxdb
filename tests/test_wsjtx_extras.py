@@ -431,7 +431,6 @@ def test_parseWsjtxAllLog(data, expected, tmp_path):
         ("JQ78tf", True),
         ("EL29kn", True),
         ("JB17gx", True),
-
     ),
 )
 def test_is_locator(locator, expected):
